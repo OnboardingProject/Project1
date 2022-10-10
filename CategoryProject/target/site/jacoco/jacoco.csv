@@ -1,0 +1,11 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+CategoryProject,com.catalog.controller,CategoryController,0,24,0,0,0,6,0,3,0,3
+CategoryProject,com.catalog.exception,GlobalExceptionHandler,37,3,0,0,8,1,3,1,3,1
+CategoryProject,com.catalog.exception,HierarchyNotFoundException,3,12,0,0,1,5,1,2,1,2
+CategoryProject,com.catalog.service,CategoryServiceImpl,248,428,19,23,41,84,19,24,8,14
+CategoryProject,com.catalog.requestVo,CategoryUpdateRequest,227,0,38,0,7,0,33,0,14,0
+CategoryProject,com.catalog.requestVo,CategoryRequest,181,46,38,0,0,7,23,10,4,10
+CategoryProject,com.catalog,CatalogApplication,5,3,0,0,2,1,1,1,1,1
+CategoryProject,com.catalog.entity,Category,209,202,50,20,0,11,36,21,2,20
+CategoryProject,com.catalog.entity,SubCategory,159,22,30,0,2,4,23,4,8,4
+CategoryProject,com.catalog.constants,Constants,3,0,0,0,1,0,1,0,1,0

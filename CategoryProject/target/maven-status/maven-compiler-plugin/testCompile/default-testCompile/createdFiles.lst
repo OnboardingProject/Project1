@@ -1,0 +1,3 @@
+com\catalog\CatalogApplicationTests.class
+com\catalog\controllertest\CategoryControllerTest.class
+com\catalog\servicetest\CategoryServiceTest.class

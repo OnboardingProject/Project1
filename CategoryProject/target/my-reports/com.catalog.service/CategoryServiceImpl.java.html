@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CategoryServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CategoryProject</a> &gt; <a href="index.source.html" class="el_package">com.catalog.service</a> &gt; <span class="el_source">CategoryServiceImpl.java</span></div><h1>CategoryServiceImpl.java</h1><pre class="source lang-java linenums">package com.catalog.service;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
+import com.catalog.constants.Constants;
+import com.catalog.entity.Category;
+import com.catalog.entity.SubCategory;
+import com.catalog.exception.HierarchyNotFoundException;
+import com.catalog.repository.CategoryRepository;
+import com.catalog.requestVo.CategoryRequest;
+import com.catalog.requestVo.CategoryUpdateRequest;
+
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Service Implementation class to save and update categories
+ *
+ */
+<span class="fc" id="L27">@Slf4j</span>
+@Service
+<span class="fc" id="L29">public class CategoryServiceImpl implements CategoryService {</span>
+	@Autowired
+	CategoryRepository categoryRepository;
+
+	/**
+	 * save method which is used to save parent and child category
+	 */
+	public Category saveCatalog(CategoryRequest categoryRequest) {
+<span class="fc" id="L37">		log.info(&quot;Enterd into save catalog&quot;);</span>
+<span class="fc" id="L38">		Category category = null;</span>
+
+		// parent request
+<span class="fc bfc" id="L41" title="All 2 branches covered.">		if (Objects.isNull(categoryRequest.getHierarchyLevel())) {</span>
+<span class="fc" id="L42">			log.info(&quot;Call for parent request&quot;);</span>
+<span class="fc" id="L43">			category = saveParent(categoryRequest);</span>
+		} else {
+<span class="fc" id="L45">			log.info(&quot;Call for child request&quot;);</span>
+<span class="fc" id="L46">			category = saveChild(categoryRequest);</span>
+		}
+<span class="fc" id="L48">		categoryRepository.save(category);</span>
+<span class="fc" id="L49">		log.info(&quot;Exit from save catalog&quot;);</span>
+<span class="fc" id="L50">		return category;</span>
+
+	}
+
+	/**
+	 * @param categoryRequest method used to save child category
+	 * @return category
+	 */
+	Category saveChild(CategoryRequest categoryRequest) {
+<span class="fc" id="L59">		log.info(&quot;Enterd into child request method&quot;);</span>
+<span class="fc" id="L60">		Category category = null;</span>
+<span class="fc" id="L61">		SubCategory subCategory = null;</span>
+<span class="fc" id="L62">		List&lt;SubCategory&gt; subCategoryRequestList = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L63">		String[] levelsHierarchy = categoryRequest.getHierarchyLevel().split(&quot;-&quot;);</span>
+<span class="fc" id="L64">		List&lt;Integer&gt; levels = new ArrayList&lt;Integer&gt;();</span>
+<span class="fc" id="L65">		int initialArraySize = 1;</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">		for (String a : levelsHierarchy) {</span>
+			// adding levels to an integer list
+<span class="fc" id="L68">			levels.add(Integer.parseInt(a));</span>
+		}
+
+<span class="fc" id="L71">		category = categoryRepository.findByLevelId(levels.get(0));</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">		if (Objects.isNull(category))</span>
+<span class="fc" id="L73">			throw new HierarchyNotFoundException(Constants.HIERARCHY_EXCEPTION_MSG, HttpStatus.BAD_REQUEST);</span>
+		else {
+<span class="fc bfc" id="L75" title="All 2 branches covered.">			if (levels.size() == initialArraySize) {</span>
+<span class="fc" id="L76">				subCategoryRequestList = category.getLevels();</span>
+<span class="fc" id="L77">				subCategoryRequestList.add(new SubCategory(getNewId(subCategoryRequestList),</span>
+<span class="fc" id="L78">						categoryRequest.getLevelName(), new ArrayList&lt;&gt;()));</span>
+<span class="fc" id="L79">				category.setLevels(subCategoryRequestList);</span>
+<span class="fc" id="L80">				return category;</span>
+			} else {
+<span class="fc bfc" id="L82" title="All 2 branches covered.">				if (Objects.isNull(category.getLevels()))</span>
+<span class="fc" id="L83">					throw new HierarchyNotFoundException(Constants.HIERARCHY_EXCEPTION_MSG, HttpStatus.BAD_REQUEST);</span>
+				else {
+
+<span class="fc bfc" id="L86" title="All 2 branches covered.">					subCategory = category.getLevels().stream().filter(x -&gt; x.getLevelId() == levels.get(1)).findFirst()</span>
+<span class="fc" id="L87">							.orElseThrow(() -&gt; new HierarchyNotFoundException(Constants.HIERARCHY_EXCEPTION_MSG,</span>
+									HttpStatus.BAD_REQUEST));
+<span class="fc" id="L89">					subCategory = recursiveLevels(1, subCategory, categoryRequest, levels);</span>
+				}
+			}
+		}
+
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">		List&lt;SubCategory&gt; parentCatList = category.getLevels().stream().filter(x -&gt; x.getLevelId() != levels.get(1))</span>
+<span class="fc" id="L95">				.collect(Collectors.toList());</span>
+<span class="fc" id="L96">		parentCatList.add(subCategory);</span>
+<span class="fc" id="L97">		category.setLevels(parentCatList);</span>
+<span class="fc" id="L98">		log.info(&quot;Exit from child request method&quot;);</span>
+<span class="fc" id="L99">		return category;</span>
+
+	}
+
+	List&lt;SubCategory&gt; catList;
+<span class="fc" id="L104">	List&lt;SubCategory&gt; temp = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L105">	List&lt;SubCategory&gt; tempList = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L106">	int counter = 0;</span>
+
+	/**
+	 * @param i
+	 * @param subCategory
+	 * @param catgeoryRequest
+	 * @param levels          recursive function to traverse through the inner
+	 *                        levels and save child categories
+	 * @return subCategory
+	 */
+	SubCategory recursiveLevels(int i, SubCategory subCategory, CategoryRequest catgeoryRequest, List&lt;Integer&gt; levels) {
+<span class="fc" id="L117">		log.info(&quot;Enterd into recursive method for child&quot;);</span>
+<span class="fc" id="L118">		i = i + 1;</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">		if (Objects.isNull(subCategory.getLevels()))</span>
+<span class="fc" id="L120">			throw new HierarchyNotFoundException(Constants.HIERARCHY_EXCEPTION_MSG, HttpStatus.BAD_REQUEST);</span>
+		else {
+<span class="fc" id="L122">			List&lt;SubCategory&gt; temp = subCategory.getLevels();</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">			if (i == levels.size()) {</span>
+<span class="fc" id="L124">				temp.add(new SubCategory(getNewId(temp), catgeoryRequest.getLevelName(), new ArrayList&lt;&gt;()));</span>
+<span class="fc" id="L125">				subCategory.setLevels(temp);</span>
+			} else {
+<span class="fc" id="L127">				int j = i;</span>
+<span class="fc" id="L128">				int levelId = levels.get(i);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">				SubCategory iteratedVal = temp.stream().filter(t -&gt; t.getLevelId() == levelId).findFirst()</span>
+<span class="fc" id="L130">						.orElseThrow(() -&gt; new HierarchyNotFoundException(Constants.HIERARCHY_EXCEPTION_MSG,</span>
+								HttpStatus.BAD_REQUEST));
+<span class="fc" id="L132">				iteratedVal = recursiveLevels(i, iteratedVal, catgeoryRequest, levels);</span>
+<span class="pc bpc" id="L133" title="1 of 2 branches missed.">				temp = temp.stream().filter(x -&gt; x.getLevelId() != levels.get(j)).collect(Collectors.toList());</span>
+<span class="fc" id="L134">				temp.add(iteratedVal);</span>
+<span class="fc" id="L135">				subCategory.setLevels(temp);</span>
+			}
+<span class="fc" id="L137">			log.info(&quot;Exit from recursive method for child&quot;);</span>
+<span class="fc" id="L138">			return subCategory;</span>
+		}
+
+	}
+
+	/**
+	 * @param categoryRequest method used to save parent category
+	 * @return category
+	 */
+	Category saveParent(CategoryRequest categoryRequest) {
+<span class="fc" id="L148">		log.info(&quot;Enterd into parent request method&quot;);</span>
+<span class="fc" id="L149">		Category category = null;</span>
+<span class="fc" id="L150">		List&lt;Category&gt; listCategory = categoryRepository.findAll();</span>
+<span class="fc" id="L151">		category = new Category();</span>
+		// initially if hierarchy is null
+<span class="fc bfc" id="L153" title="All 2 branches covered.">		if (listCategory.isEmpty()) {</span>
+<span class="fc" id="L154">			category.setLevelId(1);</span>
+		} else {
+<span class="fc" id="L156">			int nextLevelId = listCategory.get(listCategory.size() - 1).getLevelId() + 1;</span>
+<span class="fc" id="L157">			category.setLevelId(nextLevelId);</span>
+		}
+<span class="fc" id="L159">		category.setLevelName(categoryRequest.getLevelName());</span>
+<span class="fc" id="L160">		category.setCreatedBy(categoryRequest.getCreatedBy());</span>
+<span class="fc" id="L161">		category.setCreatedTime(LocalDateTime.now());</span>
+<span class="fc" id="L162">		category.setLastUpdatedBy(categoryRequest.getLastUpdatedBy());</span>
+<span class="fc" id="L163">		category.setLastUpdatedTime(LocalDateTime.now());</span>
+<span class="fc" id="L164">		category.setLevels(new ArrayList&lt;&gt;());</span>
+<span class="fc" id="L165">		log.info(&quot;Exit from parent request method&quot;);</span>
+<span class="fc" id="L166">		return category;</span>
+	}
+
+	/**
+	 * @param temp method used to update level id based on the highest level id
+	 *             present
+	 * @return
+	 */
+	private int getNewId(List&lt;SubCategory&gt; temp) {
+<span class="fc" id="L175">		log.info(&quot;Generating id &quot;);</span>
+<span class="fc" id="L176">		int newId = 1;</span>
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">		if (temp.size() &gt; 0) {</span>
+<span class="fc" id="L178">			List&lt;Integer&gt; idList = temp.stream().map(x -&gt; x.getLevelId()).sorted().collect(Collectors.toList());</span>
+<span class="fc" id="L179">			newId = idList.get(idList.size() - 1) + 1;</span>
+		}
+<span class="fc" id="L181">		return newId;</span>
+	}
+
+	@Override
+	public Category updateCatalog(CategoryUpdateRequest categoryUpdateRequest) {
+		// parent request
+<span class="nc" id="L187">		log.info(&quot;trying to update parent category by levelId&quot; + categoryUpdateRequest.getLevelId());</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">		if (categoryUpdateRequest.getHierarchyLevel() == null) {</span>
+<span class="nc" id="L189">			Category category = categoryRepository.findByLevelId(categoryUpdateRequest.getLevelId());</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">			if (Objects.nonNull(category)) {</span>
+<span class="nc" id="L191">				category.setLevelName(categoryUpdateRequest.getLevelName());</span>
+<span class="nc" id="L192">				category.setLastUpdatedBy(categoryUpdateRequest.getLastUpdatedBy());</span>
+<span class="nc" id="L193">				category.setLastUpdatedTime(LocalDateTime.now());</span>
+<span class="nc" id="L194">				categoryRepository.save(category);</span>
+<span class="nc" id="L195">				return category;</span>
+			}
+
+			else {
+<span class="nc" id="L199">				log.info(&quot;parent class exception occurs&quot;);</span>
+<span class="nc" id="L200">				throw new HierarchyNotFoundException(Constants.HIERARCHY_EXCEPTION_MSG, HttpStatus.NOT_FOUND);</span>
+			}
+		} else {
+
+<span class="nc" id="L204">			SubCategory subCategory = null;</span>
+<span class="nc" id="L205">			List&lt;SubCategory&gt; subCategoryRequestList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L206">			String[] l = categoryUpdateRequest.getHierarchyLevel().split(&quot;-&quot;);</span>
+<span class="nc" id="L207">			List&lt;Integer&gt; levels = new ArrayList&lt;Integer&gt;();</span>
+<span class="nc bnc" id="L208" title="All 2 branches missed.">			for (String a : l) {</span>
+				// adding levels to an integer list
+<span class="nc" id="L210">				levels.add(Integer.parseInt(a));</span>
+			}
+<span class="nc" id="L212">			Category category = categoryRepository.findByLevelId(categoryUpdateRequest.getLevelId());</span>
+
+<span class="nc bnc" id="L214" title="All 2 branches missed.">			if (levels.size() == 1) {</span>
+<span class="nc" id="L215">				subCategoryRequestList = category.getLevels();</span>
+
+<span class="nc" id="L217">				SubCategory subcategoryLevel1 = subCategoryRequestList.stream()</span>
+<span class="nc bnc" id="L218" title="All 2 branches missed.">						.filter(a -&gt; a.getLevelId() == levels.get(0)).findFirst()</span>
+<span class="nc" id="L219">						.orElseThrow(() -&gt; new HierarchyNotFoundException(Constants.HIERARCHY_EXCEPTION_MSG,</span>
+								HttpStatus.NOT_FOUND));
+<span class="nc" id="L221">				subcategoryLevel1.setLevelName(categoryUpdateRequest.getLevelName());</span>
+<span class="nc" id="L222">			} else {</span>
+<span class="nc bnc" id="L223" title="All 2 branches missed.">				subCategory = category.getLevels().stream().filter(x -&gt; x.getLevelId() == levels.get(0)).findFirst()</span>
+<span class="nc" id="L224">						.orElseThrow(() -&gt; new HierarchyNotFoundException(Constants.HIERARCHY_EXCEPTION_MSG,</span>
+								HttpStatus.NOT_FOUND));
+
+<span class="nc" id="L227">				subCategory = recursiveUpdateLevel(1, subCategory, categoryUpdateRequest, levels);</span>
+
+			}
+<span class="nc" id="L230">			category.setLastUpdatedBy(categoryUpdateRequest.getLastUpdatedBy());</span>
+<span class="nc" id="L231">			category.setLastUpdatedTime(LocalDateTime.now());</span>
+<span class="nc" id="L232">			categoryRepository.save(category);</span>
+<span class="nc" id="L233">			return category;</span>
+		}
+	}
+
+	SubCategory recursiveUpdateLevel(Integer i, SubCategory subCategory, CategoryUpdateRequest catgeoryUpdateRequest,
+			List&lt;Integer&gt; levels) {
+<span class="nc" id="L239">		System.out.println(&quot;recursive levels&quot;);</span>
+<span class="nc bnc" id="L240" title="All 2 branches missed.">		if (i &lt; levels.size()) {</span>
+<span class="nc" id="L241">			Integer levelId = levels.get(i);</span>
+
+<span class="nc bnc" id="L243" title="All 2 branches missed.">			SubCategory iteratedVal = subCategory.getLevels().stream().filter(t -&gt; t.getLevelId() == levelId)</span>
+<span class="nc" id="L244">					.findFirst().orElseThrow(() -&gt; new HierarchyNotFoundException(Constants.HIERARCHY_EXCEPTION_MSG,</span>
+							HttpStatus.NOT_FOUND));
+
+<span class="nc" id="L247">			iteratedVal.setLevelName(catgeoryUpdateRequest.getLevelName());</span>
+
+<span class="nc" id="L249">			i++;</span>
+<span class="nc" id="L250">			recursiveUpdateLevel(i, iteratedVal, catgeoryUpdateRequest, levels);</span>
+
+		}
+<span class="nc" id="L253">		return subCategory;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>
